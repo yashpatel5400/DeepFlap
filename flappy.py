@@ -9,6 +9,9 @@ import pyscreenshot as ImageGrab
 import cv2
 import scipy.misc
 
+import time
+import pyautogui
+
 def thresh_img(img):
 	img = cv2.medianBlur(img,3)
 	img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -18,10 +21,11 @@ def thresh_img(img):
 def extract_digits(target_img, digits):
 	target = thresh_img(cv2.imread(target_img, cv2.CV_8UC1))
 	
-	# scipy.misc.imsave("threshold.jpg", target)
+	scipy.misc.imsave("threshold.jpg", target)
 	target_width, target_height = target.shape 
 	THERSHOLD = .95
 
+	similarities = {}
 	digits_contained = {}
 	for k, digit in enumerate(digits):
 		width, height = digit.shape
@@ -30,9 +34,11 @@ def extract_digits(target_img, digits):
 				subimage = target[i:i+width, j:j+height]
 				similarity = (np.sum(subimage == digit)) / float(width * height)
 				if similarity > THERSHOLD:
-					if j not in digits_contained:
+					if j not in similarities:
+						similarities[j] = similarity
 						digits_contained[j] = k
-					elif similarity > digits_contained[j]:
+					elif similarity > similarities[j]:
+						similarities[j] = similarity
 						digits_contained[j] = k
 
 	sorted_digits = sorted(list(zip(digits_contained.keys(), digits_contained.values())))
@@ -44,7 +50,9 @@ def extract_digits(target_img, digits):
 def main():
 	digits = [thresh_img(cv2.imread("assets/{}.png".format(i), cv2.CV_8UC1)) \
 		for i in range(10)]
-
+	scipy.misc.imsave("0.png", digits[0])
+	scipy.misc.imsave("8.png", digits[8])
+	should_press = True
 	while True:
 		screen      = ImageGrab.grab(bbox=(60, 45, 360, 500))
 		game_pixels = np.array(screen)
@@ -53,6 +61,8 @@ def main():
 		target_fn = "target.png"
 		digit.save(target_fn)
 		number = extract_digits(target_fn, digits)
+		#if should_press:
+		#	pyautogui.press("up")
 		print(number)
 
 if __name__ == "__main__":
