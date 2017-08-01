@@ -13,6 +13,12 @@ import scipy.misc
 import time
 import pyautogui
 
+from skimage import measure
+try:
+    from skimage import filters
+except ImportError:
+    from skimage import filter as filters
+
 def thresh_img(img):
 	# thresholding image to binary
 	img = cv2.medianBlur(img,3)
@@ -71,8 +77,52 @@ def bird_extraction(screen, bird):
 	# cv2.drawMatchesKnn expects list of lists as matches.
 	matched = cv2.drawMatchesKnn(bird,kp_bird,
 		screen,kp_screen,bird_position,screen,flags=2)
-	#plt.imshow(matched),plt.show()
+	plt.imshow(matched),plt.show()
 	return kp_screen[bird_position[0][0].trainIdx].pt
+
+def update_coords(img, i, j, region, coords):
+	if img[i][j] != region:
+		return
+		
+	left, right, top, bottom = coords
+	if i < left: left = i
+	if i > right: right = i
+	if j < top: top = j
+	if j > bottom: bottom = j
+	return [left, right, top, bottom]
+
+def find_pipes(fn):
+	n = 250
+	l = 256
+
+	im = cv2.imread(fn, 0)
+	im = filters.gaussian_filter(im, sigma= l / (4. * n))
+	blobs = im > 0.7 * im.mean()
+	blobs_labels = measure.label(blobs, background=0)
+	labels = np.unique(blobs_labels)
+
+	pipe_candidates = labels[2:]
+	region_size = [(np.sum(blobs_labels == label)) for label in pipe_candidates]
+	sorted_regions = sorted(list(zip(region_size, pipe_candidates)))
+	pipe_regions = [region[1] for region in sorted_regions][-4:]
+
+	# encoded as : (left, right, top, bottom)
+	width, height = blobs_labels.shape
+	pipe_coords = [(width+1, -1, height+1, -1) for _ in pipe_regions]
+	region_to_coord = dict(zip(pipe_regions, pipe_coords))
+	for i in range(width):
+		for j in range(height):
+			for region in region_to_coord:
+				new_coords = update_coords(blobs_labels, i, j, 
+					region, region_to_coord[region])
+				if new_coords is not None:
+					region_to_coord[region] = new_coords
+
+	img_with_pipe = cv2.imread(fn, 1)
+	for region in region_to_coord:
+		left, right, top, bottom = region_to_coord[region]
+		cv2.rectangle(img_with_pipe, (top, left), (bottom, right), (0,0,255))
+	scipy.misc.imsave("pipe_labels.png", img_with_pipe)
 
 def main():
 	digits = [thresh_img(cv2.imread("assets/{}.png".format(i), cv2.CV_8UC1)) \
@@ -80,18 +130,21 @@ def main():
 	should_press = True
 
 	# Initiate SIFT detector
-	bird = cv2.imread('assets/bird.png',0) 
+	bird = cv2.imread('assets/bird.png',0)
+	pipe = cv2.imread('assets/pipe-green.png') 
 	
 	for i in range(1):
 		screen      = ImageGrab.grab(bbox=(60, 45, 360, 500))
 		game_pixels = np.array(screen)
 		scipy.misc.imsave("screen.png", game_pixels)
-		screen = cv2.imread("screen.png",0)
+		
+		screen = cv2.imread("screen.png")
+		screen_contours = find_pipes("screen.png")
 
-		bird_x, bird_y = bird_extraction(screen, bird)
-		pointed_screen = cv2.circle(screen, (int(bird_x), int(bird_y)), 25, (0,0,255))
-		scipy.misc.imsave("point.png", pointed_screen)
-
+		# screen = cv2.imread("screen.png")
+		# bird_extraction(screen, green_pipe)
+		# bird_x, bird_y = bird_extraction(screen, bird)
+		
 		# target_fn = "target.png" 
 		# digit = ImageGrab.grab(bbox=(175,100,250,150))
 		# digit.save(target_fn)
