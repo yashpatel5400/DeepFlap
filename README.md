@@ -3,8 +3,9 @@ Keras deep learning implementation of beating Flappy bird. Please feel free to f
 my videos where you get to see the process of developing this projects and can develop on your
 own as well! The tutorial is linked in both YouTube and Medium at my corresponding channels:
 
-YouTube: https://medium.com/@yashpatel_86510/
-Medium: https://www.youtube.com/channel/UCCWDCoXk2LBrySKzLvSRlcg
+Medium: https://medium.com/@yashpatel_86510/
+
+YouTube: https://www.youtube.com/channel/UCCWDCoXk2LBrySKzLvSRlcg
 
 ![GitHub Logo](https://www.wired.com/images_blogs/gamelife/2014/02/title.jpg)
 
