@@ -125,6 +125,7 @@ def find_pipes(fn):
 	scipy.misc.imsave("pipe_labels.png", img_with_pipe)
 
 def main():
+	GAME_TIME_OUT = 20
 	digits = [thresh_img(cv2.imread("assets/{}.png".format(i), cv2.CV_8UC1)) \
 		for i in range(10)]
 	should_press = True
@@ -132,8 +133,11 @@ def main():
 	# Initiate SIFT detector
 	bird = cv2.imread('assets/bird.png',0)
 	pipe = cv2.imread('assets/pipe-green.png') 
-	
-	for i in range(1):
+
+	previous_score   = -1
+	score_time_delta = 0
+	while True:
+		start_time = time.time()
 		screen      = ImageGrab.grab(bbox=(60, 45, 360, 500))
 		game_pixels = np.array(screen)
 		scipy.misc.imsave("screen.png", game_pixels)
@@ -145,14 +149,26 @@ def main():
 		# bird_extraction(screen, green_pipe)
 		# bird_x, bird_y = bird_extraction(screen, bird)
 		
-		# target_fn = "target.png" 
-		# digit = ImageGrab.grab(bbox=(175,100,250,150))
-		# digit.save(target_fn)
-		# number = extract_digits(target_fn, digits)
-		# print(number)
-
+		target_fn = "target.png" 
+		digit = ImageGrab.grab(bbox=(175,100,250,150))
+		digit.save(target_fn)
+		current_score = extract_digits(target_fn, digits)
+		end_time = time.time()
+		
 		#if should_press:
 		#	pyautogui.press("up")
+
+		if previous_score != current_score:
+			previous_score = current_score
+			score_time_delta = 0
+		else:
+			score_time_delta += end_time - start_time
+
+		if score_time_delta > GAME_TIME_OUT:
+			pyautogui.press("up")
+			time.sleep(1)
+			pyautogui.press("up")
+			previous_score = -1
 		
 if __name__ == "__main__":
 	main()
